@@ -1,15 +1,24 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyparser = require('body-parser');
+const cors = require('cors');
 require('dotenv').config()
 
-const app = express();
+// Routes
+const { authRoutes, homeRoutes } = require('./routes');
 
-// capturar body
+// Middlewares
+const { verifyToken } = require('./middlewares');
+
+const app = express();
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
+app.use(cors({
+    origin: '*',
+    optionsSuccessStatus: 200,
+}));
 
-// Conexión a Base de datos
+// DB conection
 const username = encodeURIComponent(process.env.USERNAME);
 const password = encodeURIComponent(process.env.PASSWORD);
 const dbname = encodeURIComponent(process.env.DBNAME);
@@ -18,23 +27,14 @@ const uri = `mongodb+srv://${username}:${password}@cluster0.wniec.mongodb.net/${
 mongoose.connect(uri,
     { useNewUrlParser: true, useUnifiedTopology: true }
 )
-.then(() => console.log('Base de datos conectada'))
-.catch(e => console.log('error db:', e))
+    .then(() => console.log('Database conected'))
+    .catch(e => console.log('error db:', e))
 
-// import routes
-const authRoutes = require('./routes/auth');
-
-// route middlewares
-app.get('/', (req, res) => {
-    res.json({
-        estado: true,
-        mensaje: 'funciona!'
-    })
-});
 app.use('/api/user', authRoutes);
+app.use('/api/home', verifyToken, homeRoutes);
 
-// iniciar server
+// Server start
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`servidor andando en: ${PORT}`)
+    console.log(`Server running on port: ${PORT}`)
 })
